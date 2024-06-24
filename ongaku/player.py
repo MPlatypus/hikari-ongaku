@@ -64,6 +64,7 @@ class Player:
         "_volume",
         "_autoplay",
         "_position",
+        "_loop",
     )
 
     def __init__(
@@ -85,6 +86,7 @@ class Player:
         self._volume: int = -1
         self._autoplay: bool = True
         self._position: int = 0
+        self._loop = False
 
         self.app.event_manager.subscribe(TrackEndEvent, self._track_end_event)
         self.app.event_manager.subscribe(PlayerUpdateEvent, self._player_update_event)
@@ -148,6 +150,11 @@ class Player:
         Whether or not the next song will play, when this song ends.
         """
         return self._autoplay
+
+    @property
+    def loop(self) -> bool:
+        """Whether the current track will play again."""
+        return self._loop
 
     @property
     def connected(self) -> bool:
@@ -899,6 +906,31 @@ class Player:
             f"Successfully set position ({value}) to track in {self.guild_id}",
         )
 
+    def set_loop(self, enable: bool | None = None) -> bool:
+        """
+        Set loop.
+
+        whether to enable or disable looping of the current track.
+
+        Example
+        -------
+        ```py
+        await player.set_loop()
+        ```
+
+        Parameters
+        ----------
+        enable
+            Whether or not to enable looping. If left empty, it will toggle the current status.
+        """
+        if enable:
+            self._loop = enable
+            return self._loop
+
+        self._loop = not self._loop
+
+        return self._loop
+
     async def transfer(self, session: Session) -> Player:
         """Transfer.
 
@@ -991,7 +1023,12 @@ class Player:
 
             return
 
-        self.remove(0)
+        if not self._loop:
+            _logger.log(
+                TRACE_LEVEL,
+                f"Removing first track from guild {self.guild_id}"
+            )
+            self.remove(0)
 
         _logger.log(
             TRACE_LEVEL,
